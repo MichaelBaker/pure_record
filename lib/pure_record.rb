@@ -13,6 +13,7 @@ module PureRecord
     end
 
     def initialize(attrs={})
+      attrs                = attrs.dup
       options              = attrs.delete(:options) || {}
       @loaded_associations = attrs.delete(:loaded_associations) || {}
       attrs                = attrs.stringify_keys

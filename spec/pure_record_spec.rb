@@ -81,6 +81,12 @@ RSpec.describe PureRecord do
     it 'allows you to pass invalid keys with the ignore_extra_attrs option' do
       TestRecord::PureTestRecord.new(hello: 'there', options: { ignore_extra_attrs: true })
     end
+
+    it 'doesn\'t modify the hash of arguments' do
+      opts = {name: 'Jimmy Johnson', loaded_associations: true}
+      TestRecord::PureTestRecord.new(opts)
+      expect(opts).to eq name: 'Jimmy Johnson', loaded_associations: true
+    end
   end
 
   describe 'pure' do
