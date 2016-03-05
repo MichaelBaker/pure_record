@@ -111,7 +111,7 @@ RSpec.describe PureRecord do
 
     it "does not purify associations which haven't already been loaded" do
       record = TestRecord.create!(name: 'Michael', age: 123)
-      record.test_associations << TestAssociation.new(city: 'Chicago')
+      TestAssociation.create!(test_record: record, city: 'Chicago')
       pure_record = record.pure
       expect do
         pure_record.test_associations

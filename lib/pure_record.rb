@@ -1,5 +1,5 @@
 module PureRecord
-  class UnloadedAssociationError < StandardError; end
+  UnloadedAssociationError = Class.new StandardError
 
   Create = Struct.new(:pure_instance, :options)
   Update = Struct.new(:pure_instance, :options)
@@ -8,9 +8,14 @@ module PureRecord
   class PureClass
     attr_reader :loaded_associations
 
+    class << self
+      attr_accessor :attributes, :associations, :active_record_class
+    end
+
     def self.join_attrs(attrs)
       attrs.map {|a| "'#{a}'" }.join(", ")
     end
+
 
     def initialize(attrs={})
       attrs                = attrs.dup
@@ -18,7 +23,6 @@ module PureRecord
       @loaded_associations = attrs.delete(:loaded_associations) || {}
       attrs                = attrs.stringify_keys
       extra_keys           = attrs.keys - self.class.attributes
-
 
       if extra_keys.any? && !options[:ignore_extra_attrs]
         raise ArgumentError.new("#{self.class.name} was initialized with invalid attributes #{self.class.join_attrs(extra_keys)}. The only valid attributes for #{self.class.name} are #{self.class.join_attrs(self.class.attributes)}")
@@ -29,6 +33,7 @@ module PureRecord
       end
     end
 
+
     def already_persisted?
       @already_persisted
     end
@@ -38,12 +43,12 @@ module PureRecord
     end
 
     def impure
-     instance = self.class.active_record_class.new
-     (self.class.attributes - ['already_persisted']).each do |attr|
-       instance.send("#{attr}=", self.send(attr))
-     end
-     instance.instance_variable_set("@new_record", !already_persisted?)
-     instance
+      instance = self.class.active_record_class.new
+      (self.class.attributes - ['already_persisted']).each do |attr|
+        instance.send("#{attr}=", self.send(attr))
+      end
+      instance.instance_variable_set("@new_record", !already_persisted?)
+      instance
     end
 
     def method_missing(method_name, *args, &block)
@@ -64,15 +69,11 @@ module PureRecord
     associations = target_class.reflect_on_all_associations.map(&:name)
 
     pure_class = Class.new PureClass do
-      attr_accessor *attributes
-
-      class << self
-        attr_accessor :attributes, :associations, :active_record_class
-      end
-
       self.attributes          = attributes + ['already_persisted']
       self.associations        = associations
       self.active_record_class = target_class
+
+      attr_accessor *attributes
 
       associations.each do |assoc|
         define_method assoc do
