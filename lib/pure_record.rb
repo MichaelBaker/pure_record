@@ -6,22 +6,27 @@ module PureRecord
   Delete = Struct.new(:pure_instance, :options)
 
   def self.purify(record, options={})
-    attrs = record.attributes.slice(*record.class.pure_class.attributes)
-    attrs = attrs.merge(options: {already_persisted: !record.new_record?})
+    is_collection = record.kind_of? Array
+    options[:association_cache] ||= {}
 
-    # if options[:all_associations]
-    #   attrs = attrs.merge(loaded_associations: record.class.pure_class.associations.each_with_object({}) do |assoc, hash|
-    #     loaded_assoc = send(assoc)
-    #     if loaded_assoc.respond_to?(:map)
-    #       hash[assoc] = loaded_assoc.map { |a| a.pure(options) }
-    #     else
-    #       hash[assoc] = loaded_assoc.pure(options)
-    #     end
-    #     hash
-    #   end)
-    # end
+    records = is_collection ? record : [record]
 
-    record.class.pure_class.new(attrs)
+    pure_records = records.map do |record|
+      options[:association_cache][record.object_id] ||= begin
+        attrs = record.attributes.slice(*record.class.pure_class.attributes)
+        attrs = attrs.merge(options: {already_persisted: !record.new_record?})
+
+        assoc_hash = record.class.pure_class.associations.each_with_object({}) do |assoc_name, hash|
+          assoc = record.association(assoc_name)
+          hash[assoc_name] = purify assoc.target, options if assoc.loaded?
+        end
+
+        attrs = attrs.merge(loaded_associations: assoc_hash)
+        record.class.pure_class.new(attrs)
+      end
+    end
+
+    is_collection ? pure_records : pure_records.first
   end
 
   def self.impurify(record)

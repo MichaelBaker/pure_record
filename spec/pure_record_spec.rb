@@ -118,11 +118,24 @@ RSpec.describe PureRecord do
       end.to raise_error(PureRecord::UnloadedAssociationError)
     end
 
-    it 'allows you to create pure array of all associations' do
-      record = TestRecord.create!(name: 'Michael', age: 123)
-      record.test_associations << TestAssociation.new(city: 'Chicago')
-      pure_record = PureRecord.purify record, all_associations: true
-      skip
+    it 'allows you to create pure array of all associations',t:true do
+      TestRecord.create!(name: 'Michael', age: 123) do |record|
+        record.test_associations.build city: 'Chicago'
+        record.test_associations.build city: 'Denver'
+      end
+
+      record = TestRecord.includes(:test_associations).first
+      pure_record = PureRecord.purify record
+
+      assoc1, assoc2, *rest = pure_record.test_associations
+      expect(rest).to eq []
+      expect(assoc1.city).to eq 'Chicago'
+      expect(assoc2.city).to eq 'Denver'
+      expect(assoc1.test_record_id).to eq record.id
+      expect(assoc2.test_record_id).to eq record.id
+
+      expect(assoc1.test_record).to equal pure_record
+      expect(assoc2.test_record).to equal pure_record
     end
   end
 
