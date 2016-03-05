@@ -5,6 +5,13 @@ require 'database_cleaner'
 
 # TODO
 #
+# Specs
+# -----
+# Unrecognized keys passed to 'pure'
+# Trying to call `pure` on inpure associations
+# pure methods
+# only follows has_* associations
+#
 # Features
 # --------
 # Associations
@@ -25,6 +32,7 @@ ActiveRecord::Schema.define do
 
   create_table :test_associations do |table|
     table.column :test_record_id, :integer
+    table.column :city,           :string
   end
 end
 
@@ -32,16 +40,12 @@ class TestRecord < ActiveRecord::Base
   validates :age, presence: true
   has_many  :test_associations
 
-  PureRecord.create_pure_class(self) do
-  end
+  PureRecord.create_pure_class(self)
 end
 
 class TestAssociation < ActiveRecord::Base
   belongs_to :test_record
-end
-
-class TestRecord < ActiveRecord::Base
-  validates :age, presence: true
+  PureRecord.create_pure_class(self)
 end
 
 describe PureRecord do
@@ -97,6 +101,21 @@ describe PureRecord do
       record      = TestRecord.new(name: 'Michael', age: 123)
       pure_record = record.pure
       expect(pure_record.already_persisted).to be false
+    end
+
+    it "does not purify associations which haven't already been loaded" do
+      record = TestRecord.create!(name: 'Michael', age: 123)
+      record.test_associations << TestAssociation.new(city: 'Chicago')
+      pure_record = record.pure
+      expect do
+        pure_record.test_associations
+      end.to raise_error(PureRecord::UnloadedAssociationError)
+    end
+
+    it 'allows you to create pure array of all associations' do
+      record = TestRecord.create!(name: 'Michael', age: 123)
+      record.test_associations << TestAssociation.new(city: 'Chicago')
+      pure_record = record.pure(all_associations: true)
     end
   end
 
