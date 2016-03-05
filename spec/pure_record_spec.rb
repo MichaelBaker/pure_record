@@ -89,30 +89,30 @@ RSpec.describe PureRecord do
     end
   end
 
-  describe 'pure' do
+  describe '.purify' do
     it 'returns a pure record with the same values as the receiving Active Record model' do
       record      = TestRecord.new(name: 'Michael', age: 123)
-      pure_record = record.pure
+      pure_record = PureRecord.purify record
       expect(pure_record.name).to eq('Michael')
       expect(pure_record.age).to  eq(123)
     end
 
     it 'records that the active record model has been persisted' do
       record      = TestRecord.create!(name: 'Michael', age: 123)
-      pure_record = record.pure
+      pure_record = PureRecord.purify record
       expect(pure_record.already_persisted?).to be true
     end
 
     it 'records that the active record model has not been persisted yet' do
       record      = TestRecord.new(name: 'Michael', age: 123)
-      pure_record = record.pure
+      pure_record = PureRecord.purify record
       expect(pure_record.already_persisted?).to be false
     end
 
     it "does not purify associations which haven't already been loaded" do
       record = TestRecord.create!(name: 'Michael', age: 123)
       TestAssociation.create!(test_record: record, city: 'Chicago')
-      pure_record = record.pure
+      pure_record = PureRecord.purify record
       expect do
         pure_record.test_associations
       end.to raise_error(PureRecord::UnloadedAssociationError)
@@ -121,7 +121,8 @@ RSpec.describe PureRecord do
     it 'allows you to create pure array of all associations' do
       record = TestRecord.create!(name: 'Michael', age: 123)
       record.test_associations << TestAssociation.new(city: 'Chicago')
-      pure_record = record.pure(all_associations: true)
+      pure_record = PureRecord.purify record, all_associations: true
+      skip
     end
   end
 
@@ -136,7 +137,7 @@ RSpec.describe PureRecord do
 
   it "tells you when you're trying to do something that would be valid, if this weren't a pure record" do
     record      = TestRecord.new(name: 'Michael', age: 123)
-    pure_record = record.pure
+    pure_record = PureRecord.purify record
     expect do
       pure_record.save
     end.to raise_error(NoMethodError, /is not a pure method/)
@@ -144,7 +145,7 @@ RSpec.describe PureRecord do
 
   it 'updates an impure record correctly after changing an attribute' do
     record           = TestRecord.create!(name: 'Michael', age: 123)
-    pure_record      = record.pure
+    pure_record      = PureRecord.purify record
     pure_record.name = 'Hello'
     expect(TestRecord.count).to eq(1)
     pure_record.impure.save!
@@ -155,7 +156,7 @@ RSpec.describe PureRecord do
 
   it 'creates an impure record correctly after setting attributes' do
     record           = TestRecord.new(name: 'Michael', age: 123)
-    pure_record      = record.pure
+    pure_record      = PureRecord.purify record
     pure_record.name = 'Hello'
     expect(TestRecord.count).to eq(0)
     pure_record.impure.save!

@@ -5,6 +5,25 @@ module PureRecord
   Update = Struct.new(:pure_instance, :options)
   Delete = Struct.new(:pure_instance, :options)
 
+  def self.purify(record, options={})
+    attrs = record.attributes.slice(*record.class.pure_class.attributes)
+    attrs = attrs.merge(already_persisted: !record.new_record?)
+
+    # if options[:all_associations]
+    #   attrs = attrs.merge(loaded_associations: record.class.pure_class.associations.each_with_object({}) do |assoc, hash|
+    #     loaded_assoc = send(assoc)
+    #     if loaded_assoc.respond_to?(:map)
+    #       hash[assoc] = loaded_assoc.map { |a| a.pure(options) }
+    #     else
+    #       hash[assoc] = loaded_assoc.pure(options)
+    #     end
+    #     hash
+    #   end)
+    # end
+
+    record.class.pure_class.new(attrs)
+  end
+
   class PureClass
     attr_reader :loaded_associations
 
@@ -15,7 +34,6 @@ module PureRecord
     def self.join_attrs(attrs)
       attrs.map {|a| "'#{a}'" }.join(", ")
     end
-
 
     def initialize(attrs={})
       attrs                = attrs.dup
@@ -91,33 +109,11 @@ module PureRecord
     end
 
     target_class.pure_class = pure_class
-    target_class.include InstanceMethods
 
     name_without_namespace = target_class.name.split('::').last
     target_class.const_set "Pure#{name_without_namespace}", pure_class
 
     pure_class.class_eval(&block)   if block
     target_class.class_eval(&block) if block
-  end
-
-  module InstanceMethods
-    def pure(options={})
-      attrs = self.attributes.slice(*self.class.pure_class.attributes)
-      attrs = attrs.merge(already_persisted: !new_record?)
-
-      # if options[:all_associations]
-      #   attrs = attrs.merge(loaded_associations: self.class.pure_class.associations.each_with_object({}) do |assoc, hash|
-      #     loaded_assoc = send(assoc)
-      #     if loaded_assoc.respond_to?(:map)
-      #       hash[assoc] = loaded_assoc.map { |a| a.pure(options) }
-      #     else
-      #       hash[assoc] = loaded_assoc.pure(options)
-      #     end
-      #     hash
-      #   end)
-      # end
-
-      self.class.pure_class.new(attrs)
-    end
   end
 end
