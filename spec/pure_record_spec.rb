@@ -48,7 +48,7 @@ class TestAssociation < ActiveRecord::Base
   PureRecord.create_pure_class(self)
 end
 
-describe PureRecord do
+RSpec.describe PureRecord do
   before(:all)  { DatabaseCleaner.strategy = :transaction }
   before(:each) { DatabaseCleaner.start }
   after(:each)  { DatabaseCleaner.clean }
