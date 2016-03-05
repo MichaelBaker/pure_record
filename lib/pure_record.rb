@@ -7,7 +7,7 @@ module PureRecord
 
   def self.purify(record, options={})
     attrs = record.attributes.slice(*record.class.pure_class.attributes)
-    attrs = attrs.merge(already_persisted: !record.new_record?)
+    attrs = attrs.merge(options: {already_persisted: !record.new_record?})
 
     # if options[:all_associations]
     #   attrs = attrs.merge(loaded_associations: record.class.pure_class.associations.each_with_object({}) do |assoc, hash|
@@ -26,7 +26,7 @@ module PureRecord
 
   def self.impurify(record)
     instance = record.class.active_record_class.new
-    (record.class.attributes - ['already_persisted']).each do |attr|
+    record.class.attributes.each do |attr|
       instance.send("#{attr}=", record.send(attr))
     end
     instance.instance_variable_set("@new_record", !record.already_persisted?)
@@ -48,6 +48,7 @@ module PureRecord
     def initialize(attrs={})
       attrs                = attrs.dup
       options              = attrs.delete(:options) || {}
+      @already_persisted   = options.fetch(:already_persisted, false)
       @loaded_associations = attrs.delete(:loaded_associations) || {}
       attrs                = attrs.stringify_keys
       extra_keys           = attrs.keys - self.class.attributes
@@ -88,7 +89,7 @@ module PureRecord
     associations = target_class.reflect_on_all_associations.map(&:name)
 
     pure_class = Class.new PureClass do
-      self.attributes          = attributes + ['already_persisted']
+      self.attributes          = attributes
       self.associations        = associations
       self.active_record_class = target_class
 
