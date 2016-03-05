@@ -126,6 +126,30 @@ RSpec.describe PureRecord do
     end
   end
 
+  describe '.impurify' do
+    it 'updates an impure record correctly after changing an attribute' do
+      record           = TestRecord.create!(name: 'Michael', age: 123)
+      pure_record      = PureRecord.purify record
+      pure_record.name = 'Hello'
+      expect(TestRecord.count).to eq(1)
+      PureRecord.impurify(pure_record).save!
+      expect(TestRecord.count).to      eq(1)
+      expect(TestRecord.first.age).to  eq(123)
+      expect(TestRecord.first.name).to eq('Hello')
+    end
+
+    it 'creates an impure record correctly after setting attributes' do
+      record           = TestRecord.new(name: 'Michael', age: 123)
+      pure_record      = PureRecord.purify record
+      pure_record.name = 'Hello'
+      expect(TestRecord.count).to eq(0)
+      PureRecord.impurify(pure_record).save!
+      expect(TestRecord.count).to      eq(1)
+      expect(TestRecord.first.age).to  eq(123)
+      expect(TestRecord.first.name).to eq('Hello')
+    end
+  end
+
   describe 'valid?' do
     it "runs the model's validations" do
       pure_record = TestRecord::PureTestRecord.new(name: 'Michael')
@@ -141,27 +165,5 @@ RSpec.describe PureRecord do
     expect do
       pure_record.save
     end.to raise_error(NoMethodError, /is not a pure method/)
-  end
-
-  it 'updates an impure record correctly after changing an attribute' do
-    record           = TestRecord.create!(name: 'Michael', age: 123)
-    pure_record      = PureRecord.purify record
-    pure_record.name = 'Hello'
-    expect(TestRecord.count).to eq(1)
-    pure_record.impure.save!
-    expect(TestRecord.count).to      eq(1)
-    expect(TestRecord.first.age).to  eq(123)
-    expect(TestRecord.first.name).to eq('Hello')
-  end
-
-  it 'creates an impure record correctly after setting attributes' do
-    record           = TestRecord.new(name: 'Michael', age: 123)
-    pure_record      = PureRecord.purify record
-    pure_record.name = 'Hello'
-    expect(TestRecord.count).to eq(0)
-    pure_record.impure.save!
-    expect(TestRecord.count).to      eq(1)
-    expect(TestRecord.first.age).to  eq(123)
-    expect(TestRecord.first.name).to eq('Hello')
   end
 end

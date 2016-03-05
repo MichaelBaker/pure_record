@@ -24,6 +24,16 @@ module PureRecord
     record.class.pure_class.new(attrs)
   end
 
+  def self.impurify(record)
+    instance = record.class.active_record_class.new
+    (record.class.attributes - ['already_persisted']).each do |attr|
+      instance.send("#{attr}=", record.send(attr))
+    end
+    instance.instance_variable_set("@new_record", !record.already_persisted?)
+    instance
+  end
+
+
   class PureClass
     attr_reader :loaded_associations
 
@@ -57,16 +67,7 @@ module PureRecord
     end
 
     def valid?
-      impure.valid?
-    end
-
-    def impure
-      instance = self.class.active_record_class.new
-      (self.class.attributes - ['already_persisted']).each do |attr|
-        instance.send("#{attr}=", self.send(attr))
-      end
-      instance.instance_variable_set("@new_record", !already_persisted?)
-      instance
+      PureRecord.impurify(self).valid?
     end
 
     def method_missing(method_name, *args, &block)
