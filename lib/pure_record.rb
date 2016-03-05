@@ -6,7 +6,7 @@ module PureRecord
   Delete = Struct.new(:pure_instance, :options)
 
   class PureClass
-    attr_reader :already_persisted, :loaded_associations
+    attr_reader :loaded_associations
 
     def self.join_attrs(attrs)
       attrs.map {|a| "'#{a}'" }.join(", ")
@@ -28,6 +28,10 @@ module PureRecord
       end
     end
 
+    def already_persisted?
+      @already_persisted
+    end
+
     def valid?
       impure.valid?
     end
@@ -37,7 +41,7 @@ module PureRecord
      (self.class.attributes - ['already_persisted']).each do |attr|
        instance.send("#{attr}=", self.send(attr))
      end
-     instance.instance_variable_set("@new_record", !already_persisted)
+     instance.instance_variable_set("@new_record", !already_persisted?)
      instance
     end
 

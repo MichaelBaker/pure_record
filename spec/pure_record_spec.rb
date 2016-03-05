@@ -94,13 +94,13 @@ RSpec.describe PureRecord do
     it 'records that the active record model has been persisted' do
       record      = TestRecord.create!(name: 'Michael', age: 123)
       pure_record = record.pure
-      expect(pure_record.already_persisted).to be true
+      expect(pure_record.already_persisted?).to be true
     end
 
     it 'records that the active record model has not been persisted yet' do
       record      = TestRecord.new(name: 'Michael', age: 123)
       pure_record = record.pure
-      expect(pure_record.already_persisted).to be false
+      expect(pure_record.already_persisted?).to be false
     end
 
     it "does not purify associations which haven't already been loaded" do
