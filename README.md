@@ -88,13 +88,13 @@ pure_record = PureRecord.purify(record)
 pure_record.test_assoications.map(&:city) # => PureRecord::UnloadedAssociationError: 
   # You tried to access association test_associations on TestRecord::PureTestRecord, but
   # that association wasn't loaded when the pure record was constructed. You might want
-  # to use the 'includes: test_associations' option when querying for TestRecord.
+  # to use the '.includes( :test_associations)' option when querying for TestRecord.
 ```
 
 As the error message states, you need to `includes` any associations you intend to use in your pure code.
 
 ```ruby
-record      = TestRecord.find(4)
+record      = TestRecord.includes(:test_associations).find(4)
 pure_record = PureRecord.purify(record)
 pure_record.test_assoications.map(&:city)
 ```
