@@ -75,7 +75,7 @@ pure_records.each do |record|
 end
 
 impure_records = PureRecord.impurify(pure_records)
-impure_records.map(&:save)
+impure_records.each(&:save)
 ```
 
 `purify` requires that all of the data you want to work with be loaded into memory already. This is why we had to call `to_a` on the relation in the previous example.
