@@ -85,10 +85,13 @@ This same requirement holds true for associations. If you try to use an associat
 ```ruby
 record      = TestRecord.find(4)
 pure_record = PureRecord.purify(record)
-pure_record.test_assoications.map(&:city) # => PureRecord::UnloadedAssociationError: You tried to access association test_associations on TestRecord::PureTestRecord, but that association wasn't loaded when the pure record was constructed. You might want to use the 'includes: test_associations' option when querying for TestRecord.
+pure_record.test_assoications.map(&:city) # => PureRecord::UnloadedAssociationError: 
+  # You tried to access association test_associations on TestRecord::PureTestRecord, but
+  # that association wasn't loaded when the pure record was constructed. You might want
+  # to use the 'includes: test_associations' option when querying for TestRecord.
 ```
 
-As the error message states, you need to `includes` any association you intend to use in your pure code.
+As the error message states, you need to `includes` any associations you intend to use in your pure code.
 
 ```ruby
 record      = TestRecord.find(4)
@@ -107,7 +110,7 @@ class TestRecord < ActiveRecord::Base
 
   PureRecord.create_pure_class(self) do
     def greeting
-      "#{name} of age #{age}"
+      "Welcome, #{name} of age #{age}"
     end
   end
 
@@ -117,12 +120,13 @@ class TestRecord < ActiveRecord::Base
 end
 
 
-record      = TestRecord.create!(age: 88, name: 'Buffalo')
+record      = TestRecord.create!(age: 88, name: 'Madison')
 pure_record = PureRecord.purify(record)
 
-record.greeting      # => 'Buffalo of age 88'
-pure_record.greeting # => 'Buffalo of age 88'
+record.greeting      # => 'Welcome, Madison of age 88'
+pure_record.greeting # => 'Welcome, Madison of age 88'
 
 record.count_associations      # => 0
-pure_record.count_associations # => NoMethodError: undefined method `count_assoications' for #<TestRecord::PureTestRecord:0x007fafd0c190a8>
+pure_record.count_associations # => NoMethodError:
+  # undefined method `count_assoications' for #<TestRecord::PureTestRecord:0x007fafd0c190a8>
 ```
