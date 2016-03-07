@@ -96,7 +96,7 @@ As the error message states, you need to `includes` any associations you intend 
 ```ruby
 record      = TestRecord.includes(:test_associations).find(4)
 pure_record = PureRecord.purify(record)
-pure_record.test_assoications.map(&:city)
+pure_record.test_associations.map(&:city)
 ```
 
 It can also be helpful to know which methods on a model require database access and which don't. You can label a set of method as 'pure' by defining them in a block passed to `PureRecord.create_pure_class`. These methods will be available on instances of both the Active Record model and the pure model. Any methods defined outside of this block will not be available to the pure model.
