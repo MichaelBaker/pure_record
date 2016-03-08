@@ -10,7 +10,6 @@ Gem::Specification.new do |s|
     'lib/pure_record.rb',
     'lib/pure_record/terse.rb',
     'lib/pure_record/pure_class.rb',
-    'lib/pure_record/helpers.rb',
     'lib/pure_record/actions.rb',
   ]
   s.homepage    = "https://github.com/michaelbaker/pure_record"

@@ -1,5 +1,7 @@
 module PureRecord
   class PureClass
+    UnloadedAssociationError = Class.new StandardError
+
     attr_reader :loaded_associations
 
     class << self
@@ -33,6 +35,14 @@ module PureRecord
 
     def already_persisted?
       @already_persisted
+    end
+
+    def fetch_association(assoc_name)
+      if loaded_associations.has_key?(assoc_name)
+        loaded_associations[assoc_name]
+      else
+        raise UnloadedAssociationError.new("You tried to access association #{assoc_name} on #{self.class.name}, but that association wasn't loaded when the pure record was constructed. You might want to use the '.includes(:#{assoc_name})' method when querying for #{self.class.active_record_class.name}.")
+      end
     end
 
     def method_missing(method_name, *args, &block)

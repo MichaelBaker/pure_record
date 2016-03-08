@@ -34,23 +34,35 @@ class TestRecord < ActiveRecord::Base
   has_many  :test_associations
   has_one   :test_thing
 
-  PureRecord.create_pure_class(self) do
-    def greeting
-      "#{name} of age #{age}"
-    end
+  PureTestRecord = PureRecord.generate_pure_class(TestRecord)
+
+  def self.pure_class
+    PureTestRecord
   end
 end
 
+
 class TestAssociation < ActiveRecord::Base
   belongs_to :test_record
-  PureRecord.create_pure_class(self)
+
+  PureTestAssociation = PureRecord.generate_pure_class(TestAssociation)
+
+  def self.pure_class
+    PureTestAssociation
+  end
 end
+
 
 class TestThing < ActiveRecord::Base
   belongs_to :test_record
-  PureRecord.create_pure_class(self)
+
+  PureTestThing = PureRecord.generate_pure_class(TestThing)
+
+  def self.pure_class
+    PureTestThing
+  end
 end
+
 
 class TestImpureRecord < ActiveRecord::Base
 end
-

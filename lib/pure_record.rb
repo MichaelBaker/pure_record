@@ -1,20 +1,8 @@
 require 'active_record'
 require 'pure_record/pure_class'
-require 'pure_record/helpers'
 require 'pure_record/actions'
 
-# TODO
-# ----
-# Make it into a gem
-# Do requires correctly
-#
-# Features
-# --------
-# Database operations
-#
 module PureRecord
-  UnloadedAssociationError = Class.new StandardError
-
   def self.Create(*args)
     PureRecord::Actions::Create.new(*args)
   end
@@ -27,32 +15,31 @@ module PureRecord
     PureRecord::Actions::Delete.new(*args)
   end
 
-  def self.create_pure_class(active_record_class, &block)
+  def self.generate_pure_class(active_record_class, &block)
     if !active_record_class.ancestors.include?(ActiveRecord::Base)
       raise ArgumentError.new("Invalid argument to 'pure'. #{active_record_class.name} is not a subclass of ActiveRecord::Base, but it very well should be.")
     end
 
-    attributes   = active_record_class.columns.map(&:name)
-    associations = active_record_class.reflect_on_all_associations.map(&:name)
-    pure_class   = PureRecord::Helpers.generate_pure_class(active_record_class, attributes, associations)
+    Class.new PureClass do
+      self.attributes          = active_record_class.columns.map(&:name)
+      self.associations        = active_record_class.reflect_on_all_associations.map(&:name)
+      self.active_record_class = active_record_class
 
-    class << active_record_class; attr_reader :pure_class; end
-    active_record_class.instance_variable_set('@pure_class', pure_class)
+      attr_accessor *attributes
 
-    name_without_namespace = active_record_class.name.split('::').last
-    active_record_class.const_set("Pure#{name_without_namespace}", pure_class)
-
-    pure_class.class_eval(&block)          if block
-    active_record_class.class_eval(&block) if block
+      associations.each do |assoc_name|
+        define_method(assoc_name) { fetch_association(assoc_name) }
+      end
+    end
   end
 
   def self.purify(record_s, options={})
     options[:association_cache] ||= {}
 
-    PureRecord::Helpers.one_or_many(record_s, 'purify', ActiveRecord::Base) do |records|
+    one_or_many(record_s, 'purify', ActiveRecord::Base) do |records|
       records.map do |record|
         if !record.class.respond_to?(:pure_class)
-          raise ArgumentError.new("#{record.class.name} does not have a pure class. Perhaps you forgot to add PureRecord.create_pure_class(#{record.class.name}) to your model.")
+          raise ArgumentError.new("#{record.class.name} does not have a pure class. Perhaps you forgot to define the 'pure_class' method for #{record.class.name}.")
         end
 
         if options[:association_cache][record.object_id]
@@ -82,7 +69,7 @@ module PureRecord
   def self.impurify(record_s, options={})
     options[:association_cache] ||= {}
 
-    PureRecord::Helpers.one_or_many(record_s, 'impurify', PureRecord::PureClass) do |records|
+    one_or_many(record_s, 'impurify', PureRecord::PureClass) do |records|
       records.map do |record|
         if options[:association_cache][record.object_id]
           return options[:association_cache][record.object_id]
@@ -112,5 +99,18 @@ module PureRecord
     Array(record_s).all?  do |record|
       impurify(record).valid?
     end
+  end
+
+  private
+
+  def self.one_or_many(record_s, method_name, valid_class, &block)
+    if !record_s.kind_of?(Array) && !record_s.kind_of?(valid_class)
+      raise ArgumentError.new("You cannot use '#{method_name}' with #{record_s.class.name}. '#{method_name}' can only be used on an instance of #{valid_class.name} or an array of instances of #{valid_class.name}.")
+    end
+
+    is_collection = record_s.kind_of?(Array)
+    records       = is_collection ? record_s : [record_s]
+    results       = block.call(records)
+    is_collection ? results : results.first
   end
 end

@@ -7,7 +7,7 @@ RSpec.describe PureRecord do
   after(:each)  { DatabaseCleaner.clean }
 
 
-  describe 'create_pure_class' do
+  describe 'generate_pure_class' do
     it 'creates a new class with only plain setters and getters from the Active Record class' do
       expect(TestRecord.const_defined?('PureTestRecord')).to be true
       TestRecord.columns.map(&:name).each do |column|
@@ -19,15 +19,8 @@ RSpec.describe PureRecord do
 
     it "raises an error if you try to create a pure class for something that isn't a subclass of ActiveRecord::Base" do
       expect do
-        PureRecord.create_pure_class(String)
+        PureRecord.generate_pure_class(String)
       end.to raise_error(ArgumentError, /not a subclass of ActiveRecord::Base/)
-    end
-
-    it 'adds the methods defined in the block to both the pure class and the active record class' do
-      record      = TestRecord.new(age: 88, name: 'Buffalo')
-      pure_record = PureRecord.purify(record)
-      expect(record.greeting).to      eq('Buffalo of age 88')
-      expect(pure_record.greeting).to eq('Buffalo of age 88')
     end
   end
 
@@ -75,7 +68,7 @@ RSpec.describe PureRecord do
       pure_record = PureRecord.purify record
       expect do
         pure_record.test_associations
-      end.to raise_error(PureRecord::UnloadedAssociationError)
+      end.to raise_error(PureRecord::PureClass::UnloadedAssociationError)
     end
 
     it 'allows you to create pure array of all associations',t:true do
