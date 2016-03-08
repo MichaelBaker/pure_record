@@ -47,19 +47,28 @@ ActiveRecord::Schema.define do
 end
 ```
 
-You start by generating pure versions of your models by passing the mode's class to `PureRecord.create_pure_class`. The following will generate the classes `TestRecord::PureTestRecord` and `TestAssociation::PureTestAssociation`.
+You start by generating pure versions of your models by passing the model's class to `PureRecord.generate_pure_class`. This will return a pure version of the Active Record class. You must also define the `pure_class` method on your Active Record class. This is how the `purify` method knows which class to use when converting a given Active Record model into a pure model.
 
 ```ruby
 class TestRecord < ActiveRecord::Base
   validates :age, presence: true
   has_many  :test_associations
 
-  PureRecord.create_pure_class(self)
+  PureTestRecord = PureRecord.generate_pure_class(self)
+
+  def self.pure_class
+    PureTestRecord
+  end
 end
 
 class TestAssociation < ActiveRecord::Base
   belongs_to :test_record
-  PureRecord.create_pure_class(self)
+
+  PureTestAssociation = PureRecord.generate_pure_class(self)
+
+  def self.pure_class
+    PureTestAssociation
+  end
 end
 ```
 
@@ -96,37 +105,5 @@ As the error message states, you need to `includes` any associations you intend 
 ```ruby
 record      = TestRecord.includes(:test_associations).find(4)
 pure_record = PureRecord.purify(record)
-pure_record.test_associations.map(&:city)
-```
-
-It can also be helpful to know which methods on a model require database access and which don't. You can label a set of method as 'pure' by defining them in a block passed to `PureRecord.create_pure_class`. These methods will be available on instances of both the Active Record model and the pure model. Any methods defined outside of this block will not be available to the pure model.
-
-This can help you document which methods are safe to use anywhere, and which are not, regardless of whether you've got an Active Record model or a pure model.
-
-```ruby
-class TestRecord < ActiveRecord::Base
-  validates :age, presence: true
-  has_many  :test_associations
-
-  PureRecord.create_pure_class(self) do
-    def greeting
-      "Welcome, #{name} of age #{age}"
-    end
-  end
-
-  def count_associations
-    test_associations.count
-  end
-end
-
-
-record      = TestRecord.create!(age: 88, name: 'Madison')
-pure_record = PureRecord.purify(record)
-
-record.greeting      # => 'Welcome, Madison of age 88'
-pure_record.greeting # => 'Welcome, Madison of age 88'
-
-record.count_associations      # => 0
-pure_record.count_associations # => NoMethodError:
-  # undefined method `count_assoications' for #<TestRecord::PureTestRecord:0x007fafd0c190a8>
+pure_record.test_associations.map(&:city) # => ["Chicago", "L.A.", "New York"]
 ```

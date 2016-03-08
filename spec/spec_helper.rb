@@ -34,7 +34,7 @@ class TestRecord < ActiveRecord::Base
   has_many  :test_associations
   has_one   :test_thing
 
-  PureTestRecord = PureRecord.generate_pure_class(TestRecord)
+  PureTestRecord = PureRecord.generate_pure_class(self)
 
   def self.pure_class
     PureTestRecord
@@ -45,7 +45,7 @@ end
 class TestAssociation < ActiveRecord::Base
   belongs_to :test_record
 
-  PureTestAssociation = PureRecord.generate_pure_class(TestAssociation)
+  PureTestAssociation = PureRecord.generate_pure_class(self)
 
   def self.pure_class
     PureTestAssociation
@@ -56,7 +56,7 @@ end
 class TestThing < ActiveRecord::Base
   belongs_to :test_record
 
-  PureTestThing = PureRecord.generate_pure_class(TestThing)
+  PureTestThing = PureRecord.generate_pure_class(self)
 
   def self.pure_class
     PureTestThing
