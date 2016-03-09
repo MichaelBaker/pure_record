@@ -15,7 +15,7 @@ module PureRecord
     PureRecord::Actions::Delete.new(*args)
   end
 
-  def self.generate_pure_class(active_record_class, &block)
+  def self.generate_pure_class(active_record_class)
     if !active_record_class.ancestors.include?(ActiveRecord::Base)
       raise ArgumentError.new("Invalid argument to 'pure'. #{active_record_class.name} is not a subclass of ActiveRecord::Base, but it very well should be.")
     end
@@ -33,9 +33,23 @@ module PureRecord
     end
   end
 
-  def self.purify(record_s, options={})
-    options[:association_cache] ||= {}
+  def self.purify(record_s)
+    cached_purify(record_s, {})
+  end
 
+  def self.impurify(record_s)
+    cached_impurify(record_s, {})
+  end
+
+  def self.validate(record_s)
+    Array(record_s).all?  do |record|
+      impurify(record).valid?
+    end
+  end
+
+  private
+
+  def self.cached_purify(record_s, association_cache)
     one_or_many(record_s, 'purify') do |records|
       records.map do |record|
         if record.kind_of?(PureRecord::PureClass)
@@ -46,19 +60,19 @@ module PureRecord
           raise ArgumentError.new("#{record.class.name} does not have a pure class. Perhaps you forgot to define the 'pure_class' method for #{record.class.name}.")
         end
 
-        if options[:association_cache][record.object_id]
-          return options[:association_cache][record.object_id]
+        if association_cache[record.object_id]
+          return association_cache[record.object_id]
         end
 
         attrs       = record.attributes.slice(*record.class.pure_class.attributes)
         attrs       = attrs.merge(options: {already_persisted: !record.new_record?})
         pure_record = record.class.pure_class.new(attrs)
-        options[:association_cache][record.object_id] = pure_record
+        association_cache[record.object_id] = pure_record
 
         assoc_hash = record.class.pure_class.associations.each_with_object({}) do |assoc_name, hash|
           assoc = record.association(assoc_name)
           if assoc.loaded? && assoc.target
-            hash[assoc_name] = purify(assoc.target, options)
+            hash[assoc_name] = cached_purify(assoc.target, association_cache)
           elsif assoc.loaded?
             hash[assoc_name] = nil
           end
@@ -70,21 +84,19 @@ module PureRecord
     end
   end
 
-  def self.impurify(record_s, options={})
-    options[:association_cache] ||= {}
-
+  def self.cached_impurify(record_s, association_cache)
     one_or_many(record_s, 'impurify') do |records|
       records.map do |record|
         if record.kind_of?(ActiveRecord::Base)
           return impurify(purify(record))
         end
 
-        if options[:association_cache][record.object_id]
-          return options[:association_cache][record.object_id]
+        if association_cache[record.object_id]
+          return association_cache[record.object_id]
         end
 
         instance = record.class.active_record_class.new
-        options[:association_cache][record.object_id] = instance
+        association_cache[record.object_id] = instance
 
         record.class.attributes.each do |attr|
           instance.send("#{attr}=", record.send(attr))
@@ -92,7 +104,7 @@ module PureRecord
 
         record.loaded_associations.each do |assoc_name, pure_associations|
           assoc        = instance.association(assoc_name).loaded!
-          impure_assoc = pure_associations ? impurify(pure_associations, options) : nil
+          impure_assoc = pure_associations ? cached_impurify(pure_associations, association_cache) : nil
           instance.association(assoc_name).loaded!
           instance.association(assoc_name).writer(impure_assoc)
         end
@@ -103,13 +115,6 @@ module PureRecord
     end
   end
 
-  def self.validate(record_s)
-    Array(record_s).all?  do |record|
-      impurify(record).valid?
-    end
-  end
-
-  private
 
   ValidClasses = [Array, ActiveRecord::Base, PureRecord::PureClass]
 
