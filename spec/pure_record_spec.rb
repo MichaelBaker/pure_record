@@ -111,7 +111,13 @@ RSpec.describe PureRecord do
     it 'raises an error if you try to use it with a relation (as opposed to an array)' do
       expect do
         PureRecord.purify(TestRecord.where(name: 'Michael'))
-      end.to raise_error(ArgumentError, /array of instances/)
+      end.to raise_error(ArgumentError, /instance of ActiveRecord::Base/)
+    end
+
+    it "clones the input if it's a pure class" do
+      pure_record = TestRecord::PureTestRecord.new(name: 'Michael', age: 123)
+      new_pure_record = PureRecord.purify(pure_record)
+      expect(pure_record).to_not equal(new_pure_record)
     end
   end
 
@@ -173,10 +179,9 @@ RSpec.describe PureRecord do
     end
 
     it 'raises an error if you try to use it with something bogus' do
-      record = TestRecord.create!(name: 'Michael', age: 123)
       expect do
-        PureRecord.impurify(record)
-      end.to raise_error(ArgumentError, /array of instances/)
+        PureRecord.impurify('hello')
+      end.to raise_error(ArgumentError, /instance of ActiveRecord::Base/)
     end
   end
 

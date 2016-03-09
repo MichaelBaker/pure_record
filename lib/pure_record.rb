@@ -36,8 +36,12 @@ module PureRecord
   def self.purify(record_s, options={})
     options[:association_cache] ||= {}
 
-    one_or_many(record_s, 'purify', ActiveRecord::Base) do |records|
+    one_or_many(record_s, 'purify') do |records|
       records.map do |record|
+        if record.kind_of?(PureRecord::PureClass)
+          return record.clone
+        end
+
         if !record.class.respond_to?(:pure_class)
           raise ArgumentError.new("#{record.class.name} does not have a pure class. Perhaps you forgot to define the 'pure_class' method for #{record.class.name}.")
         end
@@ -69,8 +73,12 @@ module PureRecord
   def self.impurify(record_s, options={})
     options[:association_cache] ||= {}
 
-    one_or_many(record_s, 'impurify', PureRecord::PureClass) do |records|
+    one_or_many(record_s, 'impurify') do |records|
       records.map do |record|
+        if record.kind_of?(ActiveRecord::Base)
+          return record.clone
+        end
+
         if options[:association_cache][record.object_id]
           return options[:association_cache][record.object_id]
         end
@@ -103,9 +111,11 @@ module PureRecord
 
   private
 
-  def self.one_or_many(record_s, method_name, valid_class, &block)
-    if !record_s.kind_of?(Array) && !record_s.kind_of?(valid_class)
-      raise ArgumentError.new("You cannot use '#{method_name}' with #{record_s.class.name}. '#{method_name}' can only be used on an instance of #{valid_class.name} or an array of instances of #{valid_class.name}.")
+  ValidClasses = [Array, ActiveRecord::Base, PureRecord::PureClass]
+
+  def self.one_or_many(record_s, method_name, &block)
+    if !ValidClasses.any? { |klass| record_s.kind_of?(klass) }
+      raise ArgumentError.new("You cannot use '#{method_name}' with #{record_s.class.name}. '#{method_name}' can only be used on an instance of ActiveRecord::Base, PureRecord::PureClass, or Array.")
     end
 
     is_collection = record_s.kind_of?(Array)
