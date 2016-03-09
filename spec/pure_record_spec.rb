@@ -183,6 +183,56 @@ RSpec.describe PureRecord do
         PureRecord.impurify('hello')
       end.to raise_error(ArgumentError, /instance of ActiveRecord::Base/)
     end
+
+    it 'clones an active record object' do
+      record     = TestRecord.create!(name: 'Michael', age: 123)
+      new_record = PureRecord.impurify(record)
+      expect(record).to_not equal(new_record)
+
+      record     = TestRecord.new(name: 'Michael', age: 123)
+      new_record = PureRecord.impurify(record)
+      expect(record).to_not equal(new_record)
+    end
+
+    it 'maintains the new record status of the input' do
+      record     = TestRecord.create!(name: 'Michael', age: 123)
+      new_record = PureRecord.impurify(record)
+      expect(new_record.new_record?).to be(false)
+
+      record     = TestRecord.new(name: 'Michael', age: 123)
+      new_record = PureRecord.impurify(record)
+      expect(new_record.new_record?).to be(true)
+    end
+
+    it 'maintains id of the input' do
+      record     = TestRecord.create!(name: 'Michael', age: 123)
+      new_record = PureRecord.impurify(record)
+      expect(new_record.id).to eq(record.id)
+
+      record     = TestRecord.new(name: 'Michael', age: 123)
+      new_record = PureRecord.impurify(record)
+      expect(new_record.id).to eq(record.id)
+    end
+
+    it 'dups any loaded associations' do
+      record = TestRecord.create!(name: 'Michael', age: 123)
+      TestAssociation.create!(test_record: record, city: 'Chicago')
+      record = TestRecord.includes(:test_associations).first
+      expect do
+        new_record = PureRecord.impurify(record)
+        expect(record.test_associations.loaded?).to     be(true)
+        expect(new_record.test_associations.loaded?).to be(true)
+      end.to_not make_database_queries
+    end
+
+    it "doesn't perform any queries" do
+      record = TestRecord.create!(name: 'Michael', age: 123)
+      TestAssociation.create!(test_record: record, city: 'Chicago')
+      record = TestRecord.includes(:test_associations).first
+      expect do
+        PureRecord.impurify(record)
+      end.to_not make_database_queries
+    end
   end
 
   describe 'valid?' do

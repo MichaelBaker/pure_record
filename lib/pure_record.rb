@@ -39,7 +39,7 @@ module PureRecord
     one_or_many(record_s, 'purify') do |records|
       records.map do |record|
         if record.kind_of?(PureRecord::PureClass)
-          return record.clone
+          return record.dup
         end
 
         if !record.class.respond_to?(:pure_class)
@@ -76,7 +76,7 @@ module PureRecord
     one_or_many(record_s, 'impurify') do |records|
       records.map do |record|
         if record.kind_of?(ActiveRecord::Base)
-          return record.clone
+          return impurify(purify(record))
         end
 
         if options[:association_cache][record.object_id]
